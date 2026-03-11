@@ -1,13 +1,15 @@
-FROM node:14-alpine
+#FROM node:14-alpine
+FROM node:18
 
 WORKDIR /app
 
-COPY package.json .
-COPY package-lock.json .
+COPY package*.json ./
+
+RUN npm install
 
 COPY . .
 
-RUN npm install -g nodemon
+RUN npm install react-scripts --save
 
 EXPOSE 3000
 

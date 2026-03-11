@@ -1,0 +1,71 @@
+services:
+  db:
+    image: postgres:15
+    container_name: todo_db
+    restart: always
+    environment:
+      POSTGRES_USER: django_user
+      POSTGRES_PASSWORD: django_password
+      POSTGRES_DB: django_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - todo_network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U django_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./back-end
+    container_name: todo_backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_DB: django_db
+      POSTGRES_USER: django_user
+      POSTGRES_PASSWORD: django_password
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      SECRET_KEY: "django-insecure-!khxf2r8u%^4y7@xm_#-x#v=@_xj#_6x8$lqy7#k9m3n4b5v6c7x8c9v0b1n2m3"
+      DEBUG: "True"
+      ALLOWED_HOSTS: "localhost,127.0.0.1,backend"
+    volumes:
+      - ./back-end:/app
+    networks:
+      - todo_network
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  frontend:
+    build: ./front-end
+    container_name: todo_frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      REACT_APP_API_URL: http://backend:8000
+    volumes:
+      - ./front-end:/app
+      - /app/node_modules
+    networks:
+      - todo_network
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "npm install && npm start"
+
+networks:
+  todo_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

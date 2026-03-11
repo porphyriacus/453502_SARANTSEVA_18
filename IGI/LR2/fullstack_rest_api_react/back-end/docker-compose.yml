@@ -1,0 +1,48 @@
+services:
+  db-server:
+    image: postgres:latest
+    volumes:
+      - db-server-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - back-end-server-network
+    
+  back-end-server:
+    build: .
+    command: >
+      sh -c "until pg_isready -h db-server -U backend_user; do
+              echo waiting for database;
+              sleep 2;
+             done;
+             python manage.py makemigrations --noinput &&
+             python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    networks:
+      - back-end-server-network
+    depends_on:
+      - db-server
+
+  front-end-server:
+    build: ../front-end
+    ports:
+      - "3000:3000"
+    networks:
+      - front-end-server-network
+    volumes:
+      - ../front-end:/app   
+
+networks:
+  back-end-server-network:
+    driver: bridge
+  front-end-server-network:
+    driver: bridge
+
+volumes:
+  db-server-data:
